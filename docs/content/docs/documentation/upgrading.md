@@ -130,6 +130,18 @@ for a moment, each with its own Ray, and the new pod's job reconciler could mark
 the old pod's queued jobs failed for good. Expect the API to be unavailable while
 the new pod starts. With a shared Ray cluster, the rolling update is unchanged.
 
+## OpenRAG 2.3.5: fewer files indexed at once by default
+
+`RAY_MAX_TASKS_PER_WORKER`, the number of files each indexer worker processes at
+once, now defaults to 10 instead of 50, in the configuration and in the chart. With
+the default single worker (`RAY_POOL_SIZE=1`), at most 10 files are in flight; the
+others wait their turn. Each file in flight holds its parsed content and chunks in
+memory while it waits for the LLM, VLM and parser limits, in the pod that also
+serves chat when Ray is embedded.
+
+To keep the previous behaviour, set `RAY_MAX_TASKS_PER_WORKER=50` (under
+`env.config` on Kubernetes).
+
 ## OpenRAG 2.3.5 on Kubernetes: a larger venv volume
 
 With `ray.enabled: true`, the Ray head installs the Python dependencies into the
