@@ -81,7 +81,10 @@ _MISSING_WORKER_REF_ERROR = "Indexer worker did not receive a registered task re
 # v19 combines two independent v18 contracts: preserving unsettled terminal
 # outcomes and using has_object_ref for worker-ref ownership. Neither v18 actor
 # generation can safely be reused with the combined worker and task-state API.
-_INDEXER_ACTOR_PROTOCOL_VERSION = "v19"
+# v20 makes workers capture max_tasks_per_worker at actor creation.
+# Existing detached v19 workers keep their old max_concurrency across API-only
+# rollouts, so this change needs a new generation to take effect on shared Ray.
+_INDEXER_ACTOR_PROTOCOL_VERSION = "v20"
 _INDEXER_POOL_DISPATCHER_ACTOR_NAME = f"IndexerPoolDispatcher-{_INDEXER_ACTOR_PROTOCOL_VERSION}"
 
 # Detached actors default to max_restarts=0, so one that dies — an OOM on a
