@@ -54,6 +54,10 @@ _MARKDOWN_UNSAFE_SOURCE_NAME_CHARS = str.maketrans(dict.fromkeys("[]*`\\<>", " "
 _MARKDOWN_BLOCK_PREFIX_RE = re.compile(r"^(?:(?:#{1,6}|[-+]|\d{1,9}[.)])(?:\s+|$))+")
 _MARKDOWN_THEMATIC_BREAK_RE = re.compile(r"^(?:(?:-\s*){3,}|(?:_\s*){3,}|(?:\*\s*){3,})$")
 _MARKDOWN_SETEXT_UNDERLINE_RE = re.compile(r"^(?:=+|-+)$")
+_MARKDOWN_TILDE_RUN_RE = re.compile(r"~+")
+# Chainlit renders with remark-directive, which reads a colon followed by a letter
+# (`re:Invent`) as a directive and drops it from the text, unless a colon precedes it.
+_MARKDOWN_TEXT_DIRECTIVE_RE = re.compile(r"(?<!:):(?=[A-Za-z])")
 
 
 class MissingOpenRAGCredentialError(RuntimeError):
@@ -103,19 +107,15 @@ def _neutralize_source_name_delimiters(value: str) -> str:
             underscore_openers.append((index, end))
         index = end
 
-    index = 0
-    while index < len(value):
-        if value[index] != "~":
-            index += 1
-            continue
-        end = index + 1
-        while end < len(value) and value[end] == "~":
-            end += 1
-        if end - index >= 2:
-            characters[index:end] = " " * (end - index)
-        index = end
+    # remark-gfm strikes text through between two runs of one or two tildes of the
+    # same length, so a lone single tilde (`PROGRA~1.pdf`) stays as it is.
+    tilde_runs = [match.span() for match in _MARKDOWN_TILDE_RUN_RE.finditer(value)]
+    single_tildes = sum(1 for start, end in tilde_runs if end - start == 1)
+    for start, end in tilde_runs:
+        if end - start > 1 or single_tildes > 1:
+            characters[start:end] = " " * (end - start)
 
-    return "".join(characters)
+    return _MARKDOWN_TEXT_DIRECTIVE_RE.sub(": ", "".join(characters))
 
 
 def _safe_source_name(value: str, existing: dict) -> str:
